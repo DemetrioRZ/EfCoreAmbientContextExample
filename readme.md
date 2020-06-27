@@ -1,1 +1,1 @@
-## Ef Core ambient context example
+## Experiments with Ef Core ambient context
