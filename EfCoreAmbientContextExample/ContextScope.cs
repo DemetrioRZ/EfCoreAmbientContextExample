@@ -11,7 +11,12 @@ namespace EfCoreAmbientContextExample
         
         private readonly Dictionary<string, DbContext> _contextsDictionary;
 
+        // remove _scopeDbContextTransaction to use TransactionScope
         private IDbContextTransaction _scopeDbContextTransaction;
+        
+        // TransactionScope can be used instead of explicit IDbContextTransaction creation,
+        // but still no success with distributed transactions on ef core
+        // private TransactionScope _transactionScope;
         
         public uint NestedUsingCount { get; set; }
 
@@ -23,6 +28,10 @@ namespace EfCoreAmbientContextExample
         
         public T GetContext<T>() where T : DbContext
         {
+            // uncomment this to use TransactionScope
+            // if (_transactionScope == null)
+            //     _transactionScope = new TransactionScope(TransactionScopeAsyncFlowOption.Enabled);
+            
             var key = typeof(T).Name;
 
             if (_contextsDictionary.ContainsKey(key) && (_contextsDictionary[key] is T context))
@@ -34,10 +43,12 @@ namespace EfCoreAmbientContextExample
 
             _contextsDictionary[key] = newContext;
 
+            // remove if else to use TransactionScope
             if (_scopeDbContextTransaction == null)
                 _scopeDbContextTransaction = newContext.Database.BeginTransaction();
             else
                 newContext.Database.UseTransaction(_scopeDbContextTransaction.GetDbTransaction());
+            // remove if else to use TransactionScope
             
             return newContext;
         }
@@ -47,7 +58,11 @@ namespace EfCoreAmbientContextExample
             if (NestedUsingCount != 0)
                 return;
             
+            // remove _scopeDbContextTransaction.Commit() to use TransactionScope
             _scopeDbContextTransaction.Commit();
+            
+            // uncomment this to use TransactionScope
+            //_transactionScope.Complete();
         }
 
         public void Rollback()
@@ -55,7 +70,13 @@ namespace EfCoreAmbientContextExample
             if (NestedUsingCount != 0)
                 return;
             
+            // remove _scopeDbContextTransaction.Rollback() to use TransactionScope
             _scopeDbContextTransaction.Rollback();
+            
+            // uncomment this to use TransactionScope
+            // need to be tested
+            // foreach (var dbContext in _contextsDictionary.Values)
+            //     dbContext?.Database.RollbackTransaction();
         }
 
         public bool IsDisposed { get; private set; }
@@ -68,7 +89,11 @@ namespace EfCoreAmbientContextExample
                 return;
             }
             
+            // remove _scopeDbContextTransaction?.Dispose() to use TransactionScope
             _scopeDbContextTransaction?.Dispose();
+            
+            // uncomment this to use TransactionScope
+            //_transactionScope?.Dispose();
 
             foreach (var dbContext in _contextsDictionary.Values)
                 dbContext?.Dispose();
